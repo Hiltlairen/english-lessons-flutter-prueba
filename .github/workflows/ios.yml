@@ -1,0 +1,44 @@
+# ============================================================
+# Compila la app para iPhone en una Mac de GitHub (gratis) y deja
+# un .ipa SIN FIRMAR como artefacto descargable. Sideloadly lo
+# firma con tu Apple ID al instalarlo.
+#
+# Se ejecuta en cada push a main, o a mano desde la pestaña
+# Actions → "Compilar iOS" → Run workflow.
+# ============================================================
+name: Compilar iOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.9
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Release: en iOS una app "debug" no abre sin un depurador conectado.
+      - run: flutter build ios --release --no-codesign
+
+      - name: Empaquetar .ipa
+        run: |
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr EnglishLessons.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EnglishLessons-ipa
+          path: EnglishLessons.ipa
+          retention-days: 14
